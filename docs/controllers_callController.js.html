@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/callController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/callController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// src/controllers/callController.js
+import { getSystemMessage } from '../utils/helpers.js';
+
+/**
+ * Generates TwiML response for an incoming call.
+ * @param {string} phoneNumber - Caller phone number.
+ * @returns {string} - The XML response.
+ */
+export function handleIncomingCall(phoneNumber) {
+  return `&lt;?xml version="1.0" encoding="UTF-8"?>
+&lt;Response>
+  &lt;Gather numDigits="1" action="/language-selection" method="POST">
+    &lt;Say language="en-US">Welcome to the WorkOnward Resume Assistant.&lt;/Say>
+    &lt;Pause length="1"/>
+    &lt;Say language="en-US">Please be aware that calls on this number are monitored, and the AI assistant may occasionally make mistakes.&lt;/Say>
+    &lt;Pause length="1"/>
+    &lt;Say language="en-US">For English, press 1.&lt;/Say>
+    &lt;Pause length="1"/>
+    &lt;Say language="es-ES">Para Español, presione 2.&lt;/Say>
+    &lt;Pause length="1"/>
+    &lt;Say language="zh-CN">中文服务，请按 3.&lt;/Say>
+    &lt;Pause length="1"/>
+    &lt;Say language="ru-RU">Для русского языка нажмите 4.&lt;/Say>
+    &lt;Pause length="1"/>
+    &lt;Say language="fr-CA">Pou kreyòl ayisyen, peze 5.&lt;/Say>
+    &lt;Pause length="1"/>
+    &lt;Say language="ko-KR">한국어를 원하시면 6을 누르세요.&lt;/Say>
+  &lt;/Gather>
+  &lt;Say>We did not receive any input. Goodbye!&lt;/Say>
+&lt;/Response>`;
+}
+
+/**
+ * Handles language selection and generates a TwiML response.
+ * @param {string} digits - The DTMF input.
+ * @param {string} phoneNumber - Caller phone number.
+ * @param {string} host - The request host to dynamically build the WebSocket URL.
+ * @returns {string} - The XML response.
+ */
+export function handleLanguageSelection(digits, phoneNumber, host) {
+  let language = 'en';
+  let greeting = "";
+
+  switch (digits) {
+    case '1':
+      language = 'en';
+      greeting = "Hello, we will now begin the conversation in English. Let's begin with your full name.";
+      break;
+    case '2':
+      language = 'es';
+      greeting = "Hola, bienvenido a WorkOnward Resume Assistant. Ahora comenzaremos la conversación en español.";
+      break;
+    case '3':
+      language = 'zh';
+      greeting = "您好，欢迎使用 WorkOnward 简历助手。我们现在开始使用中文进行对话。";
+      break;
+    case '4':
+      language = 'ru';
+      greeting = "Здравствуйте, добро пожаловать в помощник по резюме WorkOnward. Теперь мы начнем разговор на русском языке.";
+      break;
+    case '5':
+      language = 'ht';
+      greeting = "Bonjou, byenveni nan Asistan Rezime WorkOnward. Koulye a, n ap kòmanse konvèsasyon an an kreyòl ayisyen.";
+      break;
+    case '6':
+      language = 'ko';
+      greeting = "안녕하세요, WorkOnward 이력서 도우미에 오신 것을 환영합니다. 이제 한국어로 대화를 시작하겠습니다.";
+      break;
+    default:
+      language = 'en';
+      greeting = "Hello, we will now begin the conversation in English. Let's begin with your full name.";
+      break;
+  }
+  
+  return `&lt;?xml version="1.0" encoding="UTF-8"?>
+&lt;Response>
+  &lt;Say language="${
+    language === 'es'
+      ? 'es-ES'
+      : language === 'zh'
+      ? 'zh-CN'
+      : language === 'ru'
+      ? 'ru-RU'
+      : language === 'ht'
+      ? 'fr-CA'
+      : language === 'ko'
+      ? 'ko-KR'
+      : 'en-US'
+  }">${greeting}&lt;/Say>
+  &lt;Connect>
+    &lt;Stream url="wss://${host}/media-stream">
+      &lt;Parameter name="phoneNumber" value="${phoneNumber}"/>
+      &lt;Parameter name="language" value="${language}"/>
+    &lt;/Stream>
+  &lt;/Connect>
+&lt;/Response>`;
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#connectToDatabase">connectToDatabase</a></li><li><a href="global.html#errorHandler">errorHandler</a></li><li><a href="global.html#getSystemMessage">getSystemMessage</a></li><li><a href="global.html#handleIncomingCall">handleIncomingCall</a></li><li><a href="global.html#handleLanguageSelection">handleLanguageSelection</a></li><li><a href="global.html#handleMediaStream">handleMediaStream</a></li><li><a href="global.html#isTopicAllowed">isTopicAllowed</a></li><li><a href="global.html#saveConversation">saveConversation</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Mar 15 2025 04:36:26 GMT-0700 (Pacific Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

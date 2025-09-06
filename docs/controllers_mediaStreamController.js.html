@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/mediaStreamController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/mediaStreamController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// src/controllers/mediaStreamController.js
+import WebSocket from 'ws';
+import { getSystemMessage } from '../utils/helpers.js';
+import { appConfig } from '../config/app.js';
+import { saveConversation } from '../services/conversationService.js';
+import { logger } from '../utils/logger.js';
+
+const NOT_ALLOWED_TOPICS = [
+  "politics",
+  "religion",
+  "hate speech",
+  "adult content",
+  "self-harm",
+  "violence",
+  "drugs",
+  "extremism",
+];
+const TOPIC_BLOCK_MESSAGE =
+  "I'm sorry, but I cannot discuss that topic. Let's stay focused on resume assistance.";
+
+/**
+ * Checks whether the provided text is allowed.
+ * @param {string} text
+ * @returns {boolean}
+ */
+function isTopicAllowed(text) {
+  if (!text) return true;
+  const lowerText = text.toLowerCase();
+  return !NOT_ALLOWED_TOPICS.some(topic => lowerText.includes(topic));
+}
+
+// Global sessions map to track active streams.
+const sessions = new Map();
+
+/**
+ * Handles an incoming media stream WebSocket connection.
+ * @param {object} connection - The WebSocket connection.
+ * @param {object} req - The HTTP request.
+ */
+export function handleMediaStream(connection, req) {
+  logger.info('New WebSocket client connected');
+  let streamSid = null;
+
+  connection.on("message", (message) => {
+    try {
+      const data = JSON.parse(message);
+      switch (data.event) {
+        case "start":
+          streamSid = data.start.streamSid;
+          const phoneNumber = data.start.customParameters?.phoneNumber || "Unknown";
+          const chosenLanguage = data.start.customParameters?.language || 'en';
+          logger.info(`New call stream started - SID: ${streamSid}, Phone: ${phoneNumber}, Language: ${chosenLanguage}`);
+
+          // Initialize session
+          sessions.set(streamSid, {
+            streamSid,
+            phoneNumber,
+            language: chosenLanguage,
+            latestMediaTimestamp: 0,
+            lastAudioDeltaTime: Date.now(),
+            lastAssistantItem: null,
+            markQueue: [],
+            responseStartTimestampTwilio: null,
+            conversationLog: [],
+            audioWatchdog: null,
+            openAiWs: null
+          });
+          const session = sessions.get(streamSid);
+
+          // Setup watchdog for missing audio delta messages.
+          session.audioWatchdog = setInterval(() => {
+            const now = Date.now();
+            if (now - session.lastAudioDeltaTime > 5000) {
+              logger.info(`Audio watchdog: No audio delta received for session ${streamSid} in over 5 seconds.`);
+              if (session.openAiWs &amp;&amp; session.openAiWs.readyState === WebSocket.OPEN) {
+                const systemMessage = getSystemMessage(session.language);
+                const sessionUpdate = {
+                  type: "session.update",
+                  session: {
+                    turn_detection: { type: "server_vad" },
+                    input_audio_format: "g711_ulaw",
+                    output_audio_format: "g711_ulaw",
+                    voice: "sage",
+                    instructions: systemMessage,
+                    modalities: ["text", "audio"],
+                    temperature: 0.7,
+                    input_audio_transcription: { model: "whisper-1" },
+                  },
+                };
+                session.openAiWs.send(JSON.stringify(sessionUpdate));
+              }
+            }
+          }, 2000);
+
+          // Connect to Azure OpenAI WebSocket
+          const openAiWs = new WebSocket(
+            `${appConfig.azureOpenAiEndpoint}/openai/realtime?api-version=2024-10-01-preview&amp;deployment=${appConfig.azureOpenAiDeploymentName}`,
+            {
+              headers: {
+                "api-key": appConfig.azureOpenAiApiKey,
+                "OpenAI-Beta": "2024-12-17",
+              },
+            }
+          );
+          session.openAiWs = openAiWs;
+
+          openAiWs.on("open", () => {
+            logger.info(`Connected to Azure OpenAI for stream ${streamSid}`);
+            const systemMessage = getSystemMessage(session.language);
+            const sessionUpdate = {
+              type: "session.update",
+              session: {
+                turn_detection: { type: "server_vad" },
+                input_audio_format: "g711_ulaw",
+                output_audio_format: "g711_ulaw",
+                voice: "sage",
+                instructions: systemMessage,
+                modalities: ["text", "audio"],
+                temperature: 0.7,
+                input_audio_transcription: { model: "whisper-1" },
+              },
+            };
+            openAiWs.send(JSON.stringify(sessionUpdate));
+          });
+
+          openAiWs.on("message", (data) => {
+            try {
+              const response = JSON.parse(data);
+              if (!sessions.has(streamSid)) return;
+              const session = sessions.get(streamSid);
+
+              // Process audio delta responses.
+              if (response.type === "response.audio.delta" &amp;&amp; response.delta) {
+                session.lastAudioDeltaTime = Date.now();
+                connection.send(JSON.stringify({
+                  event: "media",
+                  streamSid: session.streamSid,
+                  media: { payload: response.delta }
+                }));
+                if (!session.responseStartTimestampTwilio) {
+                  session.responseStartTimestampTwilio = session.latestMediaTimestamp;
+                }
+                if (response.item_id) session.lastAssistantItem = response.item_id;
+                connection.send(JSON.stringify({
+                  event: "mark",
+                  streamSid: session.streamSid,
+                  mark: { name: "responsePart" }
+                }));
+                session.markQueue.push("responsePart");
+              }
+
+              // Process user transcription.
+              if (response.type === "conversation.item.input_audio_transcription.completed") {
+                let transcript = response.transcript;
+                if (!isTopicAllowed(transcript)) {
+                  logger.info(`User transcript contains disallowed topic: "${transcript}"`);
+                  transcript = TOPIC_BLOCK_MESSAGE;
+                }
+                const timestamp = new Date().toISOString();
+                const logEntry = { timestamp, role: "User", text: transcript };
+                logger.info(`[${streamSid}] User: ${transcript}`);
+                session.conversationLog.push(logEntry);
+              }
+
+              // Process AI transcription.
+              if (response.type === "response.audio_transcript.done") {
+                let transcript = response.transcript;
+                if (!isTopicAllowed(transcript)) {
+                  logger.info(`AI transcript contains disallowed topic: "${transcript}"`);
+                  transcript = TOPIC_BLOCK_MESSAGE;
+                }
+                const timestamp = new Date().toISOString();
+                const logEntry = { timestamp, role: "AI_Agent", text: transcript };
+                logger.info(`[${streamSid}] AI: ${transcript}`);
+                session.conversationLog.push(logEntry);
+
+                // Check for goodbye message to disconnect.
+                if (transcript.toLowerCase().includes("goodbye")) {
+                  logger.info(`Goodbye detected for stream ${streamSid}. Initiating disconnect sequence.`);
+                  connection.send(JSON.stringify({
+                    event: "disconnect",
+                    streamSid: session.streamSid,
+                    message: "Conversation ended. Disconnecting call in 3 seconds"
+                  }));
+                  setTimeout(() => {
+                    connection.close();
+                  }, 17000);
+                  return;
+                }
+              }
+            } catch (error) {
+              logger.error(`Error processing OpenAI message for stream ${streamSid || 'unknown'}:`, error);
+            }
+          });
+
+          openAiWs.on("close", () => {
+            logger.info(`Disconnected from Azure OpenAI for stream ${streamSid}`);
+          });
+
+          openAiWs.on("error", (error) => {
+            logger.error(`OpenAI WebSocket error for stream ${streamSid}:`, error);
+          });
+          break;
+
+        case "media":
+          if (sessions.has(streamSid)) {
+            const session = sessions.get(streamSid);
+            session.latestMediaTimestamp = data.media.timestamp;
+            if (session.openAiWs &amp;&amp; session.openAiWs.readyState === WebSocket.OPEN) {
+              session.openAiWs.send(JSON.stringify({ 
+                type: "input_audio_buffer.append", 
+                audio: data.media.payload 
+              }));
+            }
+          }
+          break;
+
+        case "mark":
+          if (sessions.has(streamSid)) {
+            const session = sessions.get(streamSid);
+            if (session.markQueue.length > 0) session.markQueue.shift();
+          }
+          break;
+
+        default:
+          break;
+      }
+    } catch (error) {
+      logger.error(`Error parsing WebSocket message for stream ${streamSid || 'unknown'}:`, error);
+    }
+  });
+
+  connection.on("close", async () => {
+    if (!streamSid || !sessions.has(streamSid)) {
+      logger.info("Connection closed for unknown or already closed session");
+      return;
+    }
+    const session = sessions.get(streamSid);
+    logger.info(`WebSocket connection closing for stream ${streamSid} with ${session.conversationLog.length} messages`);
+    
+    if (session.openAiWs?.readyState === WebSocket.OPEN) {
+      session.openAiWs.close();
+      logger.info(`Closed OpenAI WebSocket for stream ${streamSid}`);
+    }
+    if (session.audioWatchdog) {
+      clearInterval(session.audioWatchdog);
+    }
+    if (session.conversationLog &amp;&amp; session.conversationLog.length > 0) {
+      logger.info(`Saving conversation with ${session.conversationLog.length} messages to MongoDB...`);
+      const saved = await saveConversation(session);
+      if (saved) {
+        logger.info(`Successfully saved conversation for stream ${streamSid}`);
+      } else {
+        logger.error(`Failed to save conversation for stream ${streamSid}`);
+      }
+    } else {
+      logger.info(`No conversation data to save for stream ${streamSid}`);
+    }
+    sessions.delete(streamSid);
+    logger.info(`Session ${streamSid} cleaned up and removed from active sessions`);
+  });
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#connectToDatabase">connectToDatabase</a></li><li><a href="global.html#errorHandler">errorHandler</a></li><li><a href="global.html#getSystemMessage">getSystemMessage</a></li><li><a href="global.html#handleIncomingCall">handleIncomingCall</a></li><li><a href="global.html#handleLanguageSelection">handleLanguageSelection</a></li><li><a href="global.html#handleMediaStream">handleMediaStream</a></li><li><a href="global.html#isTopicAllowed">isTopicAllowed</a></li><li><a href="global.html#saveConversation">saveConversation</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Mar 15 2025 04:36:26 GMT-0700 (Pacific Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

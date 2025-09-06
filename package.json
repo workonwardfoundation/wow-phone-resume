@@ -1,0 +1,73 @@
+{
+  "name": "speech-assistant-openai-realtime-api-node",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon",
+    "clear": "node scripts/clear",
+    "prepare": "husky",
+    "build": "node scripts/clear && swc src -d dist --source-maps",
+    "start": "node dist/src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/autoload": "^6.2.0",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/swagger": "^9.4.2",
+    "@fastify/swagger-ui": "^5.2.2",
+    "@fastify/websocket": "^11.0.2",
+    "axios": "^1.8.1",
+    "close-with-grace": "^2.2.0",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "mongoose": "^8.12.2",
+    "pino-pretty": "^13.0.0",
+    "twilio": "^5.4.5",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "@swc/cli": "^0.6.0",
+    "@swc/core": "^1.11.13",
+    "@swc/helpers": "^0.5.15",
+    "@swc/jest": "^0.2.37",
+    "@types/node": "^22.13.13",
+    "@types/ws": "^8.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.23.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "eslint-plugin-unused-imports": "^4.1.4",
+    "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "import-sort-cli": "^6.0.0",
+    "import-sort-parser-typescript": "^6.0.0",
+    "jsdoc": "^4.0.4",
+    "lint-staged": "^15.5.0",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.28.0"
+  },
+  "engines": {
+    "node": ">=20.0.0 < 21.0.0"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "import-sort --write",
+      "prettier --write",
+      "eslint 'src/**/*.{ts,tsx}' --max-warnings=0"
+    ]
+  },
+  "importSort": {
+    ".js, .ts": {
+      "style": "eslint",
+      "parser": "typescript"
+    }
+  }
+}
