@@ -1,0 +1,67 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Development files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist
+*.log
+logs
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation and development files
+README.md
+docs
+*.md
+
+# Test files
+test
+tests
+*.test.*
+*.spec.*
+
+# Development tools
+.eslintrc*
+.prettierrc*
+eslint.config.js
+jsdoc.json
+nodemon.json
+husky
+.husky
+
+# TypeScript source maps
+*.map
+
+# Temporary files
+tmp
+temp
+
+# Coverage directory used by tools like istanbul
+coverage
+
+# nyc test coverage
+.nyc_output
