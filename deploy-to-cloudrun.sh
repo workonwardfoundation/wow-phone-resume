@@ -26,6 +26,15 @@ if [ -z "$PROJECT_ID" ]; then
     exit 1
 fi
 
+# Check if Dockerfile exists
+if [ ! -f "Dockerfile" ]; then
+    echo -e "${RED}ERROR: Dockerfile not found!${NC}"
+    echo "Make sure you have a Dockerfile in the current directory"
+    exit 1
+fi
+
+echo -e "${GREEN}✅ Environment variables configured and ready for deployment${NC}"
+
 # Set the project
 echo -e "${YELLOW}Setting GCP project to: ${PROJECT_ID}${NC}"
 gcloud config set project $PROJECT_ID
@@ -48,17 +57,23 @@ gcloud run deploy $SERVICE_NAME \
   --region $REGION \
   --allow-unauthenticated \
   --port 8080 \
-  --memory 1Gi \
+  --memory 2Gi \
   --cpu 1 \
-  --timeout 300 \
-  --max-instances 10 \
-  --set-env-vars NODE_ENV=production
+  --timeout 3600 \
+  --max-instances 5 \
+  --min-instances 1 \
+  --set-env-vars NODE_ENV=production,TWILIO_ACCOUNT_SID="AC4bdd790ee3a3bb5d6b49c771a03e99d2",TWILIO_AUTH_TOKEN="19aebc8d4b3efd93a296859d25220631",TWILIO_PHONE_NUMBER="+16469561232",AZURE_OPENAI_ENDPOINT="https://wow-rg-ai.cognitiveservices.azure.com",AZURE_OPENAI_API_KEY="3U2zukcSZWNDiT999h4XnH7QPXoIeXgnwDBcSce6VI4dWW3h23dxJQQJ99BEACHYHv6XJ3w3AAAAACOGqCmH",AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o-realtime-preview",DB_URL="mongodb+srv://bloombook:AUxKDrIdvbdcl9eH@cluster0.44rdqx8.mongodb.net"
 
 echo -e "${GREEN}✅ Deployment complete!${NC}"
+echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo "1. Set your environment variables in Cloud Run console"
-echo "2. Your service URL will be displayed above"
-echo "3. Update your Twilio webhooks to point to your new Cloud Run URL"
+echo "1. ✅ Environment variables are configured"
+echo "2. Update your Twilio phone number (+16469561232) webhook URLs to:"
+echo "   - Incoming calls: \${SERVICE_URL}/api/v1/call/incoming"
+echo "   - Language selection: \${SERVICE_URL}/api/v1/call/language" 
+echo "   - Media stream: \${SERVICE_URL}/api/v1/media-stream"
+echo "3. Test by calling +16469561232 to verify the deployment works"
+echo ""
 
 # Get the service URL
 SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region=$REGION --format="value(status.url)")
