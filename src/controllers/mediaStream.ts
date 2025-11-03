@@ -185,7 +185,7 @@ export function handleMediaStream(
                     },
                     input_audio_format: 'g711_ulaw',
                     output_audio_format: 'g711_ulaw',
-                    voice: 'sage',
+                    voice: 'alloy',
                     instructions: systemMessage,
                     modalities: ['text', 'audio'],
                     temperature: 0.7,
@@ -200,18 +200,44 @@ export function handleMediaStream(
           }, 2000);
 
           // Connect to Azure OpenAI WebSocket
-          const openAiWs = new WebSocket(
-            `${process.env.AZURE_OPENAI_ENDPOINT as string
-            }/openai/realtime?api-version=2024-10-01-preview&deployment=${process.env.AZURE_OPENAI_DEPLOYMENT_NAME
-            }`,
-            {
-              headers: {
-                'api-key': process.env.AZURE_OPENAI_API_KEY,
-                'OpenAI-Beta': '2024-12-17',
-              },
-            }
-          );
-          session.openAiWs = openAiWs;
+          // Convert HTTP endpoint to WebSocket endpoint for proper WebSocket connection
+          const httpEndpoint = process.env.AZURE_OPENAI_ENDPOINT as string;
+          let websocketUrl = `${httpEndpoint.replace('https://', 'wss://')}/openai/realtime?api-version=2024-10-01-preview&deployment=${process.env.AZURE_OPENAI_DEPLOYMENT_NAME}`;
+          
+          // Check if we need to try the alternative domain format
+          const isAlternativeDomain = httpEndpoint.includes('.cognitiveservices.azure.com');
+          if (isAlternativeDomain) {
+            // Try openai.azure.com format first as recommended in documentation
+            const resourceName = httpEndpoint.replace('https://', '').split('.')[0];
+            const alternativeUrl = `wss://${resourceName}.openai.azure.com/openai/realtime?api-version=2024-10-01-preview&deployment=${process.env.AZURE_OPENAI_DEPLOYMENT_NAME}`;
+            fastify.log.info(`Using openai.azure.com domain format for realtime API`);
+            websocketUrl = alternativeUrl;
+          }
+          
+          fastify.log.info(`Attempting to connect to Azure OpenAI WebSocket: ${websocketUrl}`);
+          
+          let openAiWs: WebSocket;
+          try {
+            openAiWs = new WebSocket(
+              websocketUrl,
+              {
+                headers: {
+                  'api-key': process.env.AZURE_OPENAI_API_KEY,
+                  'OpenAI-Beta': 'realtime=v1',
+                },
+              }
+            );
+            session.openAiWs = openAiWs;
+            
+            
+          } catch (connectionError) {
+            fastify.log.error(`Failed to create WebSocket instance for stream ${streamSid}:`, {
+              error: connectionError,
+              message: (connectionError as Error).message,
+              stack: (connectionError as Error).stack
+            });
+            return; // Exit early if we can't even create the WebSocket
+          }
 
           openAiWs.on('open', () => {
             fastify.log.info(
@@ -226,7 +252,7 @@ export function handleMediaStream(
                 },
                 input_audio_format: 'g711_ulaw',
                 output_audio_format: 'g711_ulaw',
-                voice: 'sage',
+                voice: 'alloy',
                 instructions: systemMessage,
                 modalities: ['text', 'audio'],
                 temperature: 0.7,
@@ -235,7 +261,18 @@ export function handleMediaStream(
                 },
               },
             };
-            openAiWs.send(JSON.stringify(sessionUpdate));
+            
+            fastify.log.info(`Sending session configuration for stream ${streamSid}:`);
+            
+            try {
+              const configJson = JSON.stringify(sessionUpdate, null, 2);
+              fastify.log.info(`Session config JSON: ${configJson}`);
+              openAiWs.send(configJson);
+              fastify.log.info('Session config successfully sent to Azure OpenAI');
+            } catch (error) {
+              fastify.log.error('Error sending session config:', error);
+              fastify.log.info('Raw sessionUpdate object:', sessionUpdate);
+            }
             
             // Uncomment this line to have the AI speak first
             // setTimeout(() => sendInitialGreeting(session), 500);
@@ -355,16 +392,30 @@ export function handleMediaStream(
             }
           });
 
-          openAiWs.on('close', () => {
+          openAiWs.on('close', (code, reason) => {
             fastify.log.info(
-              `Disconnected from Azure OpenAI for stream ${streamSid}`
+              `Disconnected from Azure OpenAI for stream ${streamSid}`,
+              {
+                closeCode: code,
+                closeReason: reason?.toString(),
+                timestamp: new Date().toISOString()
+              }
             );
           });
 
           openAiWs.on('error', (error) => {
             fastify.log.error(
               `OpenAI WebSocket error for stream ${streamSid}:`,
-              error
+              {
+                message: error.message,
+                name: error.name,
+                code: (error as any).code,
+                type: (error as any).type,
+                stack: error.stack,
+                stringified: JSON.stringify(error),
+                fullError: error,
+                errorKeys: Object.keys(error)
+              }
             );
           });
           break;
