@@ -139,6 +139,68 @@ It means that Prettier doesn’t have the necessary execute permissions.
 To fix this, run the following command:
 `chmod +x ./node_modules/.bin/prettier`
 
+## Deployment
+
+This application can be deployed to various cloud platforms. Choose the one that best fits your needs:
+
+### AWS ECS Fargate (Recommended for AWS users) ⭐
+
+Deploy to AWS ECS Fargate with full control and auto-scaling capabilities.
+
+**Quick Start** (5 minutes):
+```bash
+# 1. Set up secrets
+./setup-secrets.sh
+
+# 2. Deploy to ECS
+./deploy-to-ecs.sh
+
+# 3. Get your service URL
+./get-service-url.sh
+```
+
+📖 **Documentation**: See [QUICKSTART_ECS.md](./QUICKSTART_ECS.md) for quick start or [DEPLOYMENT_ECS.md](./DEPLOYMENT_ECS.md) for detailed guide.
+
+**Features**:
+- ✅ Automatic Docker build and push to ECR
+- ✅ Secure secrets management with AWS Secrets Manager
+- ✅ CloudWatch logging
+- ✅ Auto-scaling support
+- ✅ One-command deployment
+- ✅ Can be run by anyone with AWS credentials
+
+**Requirements**: AWS CLI, Docker, AWS account
+
+**Cost**: ~$30-40/month for 1 task (1 vCPU, 2GB RAM) running 24/7
+
+---
+
+### Google Cloud Run (Alternative)
+
+If you prefer Google Cloud Platform, use the existing deployment script:
+
+```bash
+./deploy-to-cloudrun.sh
+```
+
+📖 See [test_DEPLOYMENT.md](./test_DEPLOYMENT.md) for Cloud Run deployment details.
+
+---
+
+### Which Should I Choose?
+
+| Feature | AWS ECS Fargate | Google Cloud Run |
+|---------|-----------------|------------------|
+| **Setup Complexity** | Medium | Easy |
+| **Control** | Full control over tasks | Managed service |
+| **Scaling** | Manual + Auto-scaling | Automatic |
+| **Cost** | ~$30-40/month | Pay per request |
+| **WebSockets** | ✅ Full support | ⚠️ Limited |
+| **Long-running connections** | ✅ Excellent | ⚠️ Limited (60s timeout) |
+| **Best for** | Production apps | Stateless APIs |
+
+**Recommendation**: For this application with WebSocket support for Twilio Media Streams, **AWS ECS Fargate** is recommended due to better long-running connection support.
+
 # API Endpoints
 
 All API endpoints are documented using Swagger and can be viewed at the `/docs` route after starting the server with `npm run dev`.
