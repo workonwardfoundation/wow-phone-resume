@@ -1,0 +1,81 @@
+{
+  "family": "wow-phone-resume",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "wow-phone-resume",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/wow-phone-resume:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "8080"
+        },
+        {
+          "name": "TWILIO_ACCOUNT_SID",
+          "value": "PLACEHOLDER_TWILIO_ACCOUNT_SID"
+        },
+        {
+          "name": "TWILIO_AUTH_TOKEN",
+          "value": "PLACEHOLDER_TWILIO_AUTH_TOKEN"
+        },
+        {
+          "name": "TWILIO_PHONE_NUMBER",
+          "value": "PLACEHOLDER_TWILIO_PHONE_NUMBER"
+        },
+        {
+          "name": "AZURE_OPENAI_ENDPOINT",
+          "value": "PLACEHOLDER_AZURE_OPENAI_ENDPOINT"
+        },
+        {
+          "name": "AZURE_OPENAI_API_KEY",
+          "value": "PLACEHOLDER_AZURE_OPENAI_API_KEY"
+        },
+        {
+          "name": "AZURE_OPENAI_DEPLOYMENT_NAME",
+          "value": "PLACEHOLDER_AZURE_OPENAI_DEPLOYMENT_NAME"
+        },
+        {
+          "name": "DB_URL",
+          "value": "PLACEHOLDER_DB_URL"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/wow-phone-resume",
+          "awslogs-region": "YOUR_REGION",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://localhost:8080/api/v1/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
+

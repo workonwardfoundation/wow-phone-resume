@@ -1,0 +1,502 @@
+{
+  "service": {
+    "service": "wow-phone-resume",
+    "serviceObject": {
+      "name": "wow-phone-resume"
+    },
+    "provider": {
+      "name": "aws",
+      "region": "us-east-1",
+      "stage": "production",
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "8080",
+        "TWILIO_ACCOUNT_SID": "AC4bdd790ee3a3bb5d6b49c771a03e99d2",
+        "TWILIO_AUTH_TOKEN": "19aebc8d4b3efd93a296859d25220631",
+        "TWILIO_PHONE_NUMBER": "+16469561232",
+        "AZURE_OPENAI_ENDPOINT": "https://wow-rg-ai.cognitiveservices.azure.com",
+        "AZURE_OPENAI_API_KEY": "3U2zukcSZWNDiT999h4XnH7QPXoIeXgnwDBcSce6VI4dWW3h23dxJQQJ99BEACHYHv6XJ3w3AAAAACOGqCmH",
+        "AZURE_OPENAI_DEPLOYMENT_NAME": "gpt-4o-realtime-preview",
+        "DB_URL": "mongodb+srv://bloombook:AUxKDrIdvbdcl9eH@cluster0.44rdqx8.mongodb.net"
+      },
+      "versionFunctions": true,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ServerlessDeploymentBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "ServerlessDeploymentBucket"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Action": "s3:*",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            },
+                            "/*"
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "Condition": {
+                      "Bool": {
+                        "aws:SecureTransport": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "appAssets5B5A4C9F": {
+            "Type": "AWS::S3::Bucket",
+            "UpdateReplacePolicy": "Delete",
+            "DeletionPolicy": "Delete"
+          },
+          "appRequestFunction26931B51": {
+            "Type": "AWS::CloudFront::Function",
+            "Properties": {
+              "AutoPublish": true,
+              "FunctionCode": "function handler(event) {\n    var request = event.request;\n    request.headers[\"x-forwarded-host\"] = request.headers[\"host\"];\n    return request;\n}",
+              "FunctionConfig": {
+                "Comment": "wow-phone-resume-production-us-east-1-app-request",
+                "Runtime": "cloudfront-js-1.0"
+              },
+              "Name": "wow-phone-resume-production-us-east-1-app-request"
+            }
+          },
+          "appCDN7AD2C001": {
+            "Type": "AWS::CloudFront::Distribution",
+            "Properties": {
+              "DistributionConfig": {
+                "Comment": "wow-phone-resume-production app website CDN",
+                "CustomErrorResponses": [
+                  {
+                    "ErrorCachingMinTTL": 0,
+                    "ErrorCode": 500
+                  },
+                  {
+                    "ErrorCachingMinTTL": 0,
+                    "ErrorCode": 504
+                  }
+                ],
+                "DefaultCacheBehavior": {
+                  "AllowedMethods": [
+                    "GET",
+                    "HEAD",
+                    "OPTIONS",
+                    "PUT",
+                    "PATCH",
+                    "POST",
+                    "DELETE"
+                  ],
+                  "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+                  "Compress": true,
+                  "FunctionAssociations": [
+                    {
+                      "EventType": "viewer-request",
+                      "FunctionARN": {
+                        "Fn::GetAtt": [
+                          "appRequestFunction26931B51",
+                          "FunctionARN"
+                        ]
+                      }
+                    }
+                  ],
+                  "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+                  "TargetOriginId": "appCDNOrigin19F0868D7",
+                  "ViewerProtocolPolicy": "redirect-to-https"
+                },
+                "Enabled": true,
+                "HttpVersion": "http2and3",
+                "IPV6Enabled": true,
+                "Origins": [
+                  {
+                    "CustomOriginConfig": {
+                      "OriginProtocolPolicy": "https-only",
+                      "OriginSSLProtocols": [
+                        "TLSv1.2"
+                      ]
+                    },
+                    "DomainName": {
+                      "Fn::Join": [
+                        ".",
+                        [
+                          {
+                            "Ref": "HttpApi"
+                          },
+                          "execute-api.us-east-1.amazonaws.com"
+                        ]
+                      ]
+                    },
+                    "Id": "appCDNOrigin19F0868D7"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            },
+            "Export": {
+              "Name": "sls-wow-phone-resume-production-ServerlessDeploymentBucketName"
+            }
+          },
+          "appAssetsBucketName7D197FA3": {
+            "Description": "Name of the bucket that stores the website assets.",
+            "Value": {
+              "Ref": "appAssets5B5A4C9F"
+            }
+          },
+          "appDomain27230DAE": {
+            "Description": "Website domain name.",
+            "Value": {
+              "Fn::GetAtt": [
+                "appCDN7AD2C001",
+                "DomainName"
+              ]
+            }
+          },
+          "appCloudFrontCName01332E65": {
+            "Description": "CloudFront CNAME.",
+            "Value": {
+              "Fn::GetAtt": [
+                "appCDN7AD2C001",
+                "DomainName"
+              ]
+            }
+          },
+          "appDistributionIdFAAEA28E": {
+            "Description": "ID of the CloudFront distribution.",
+            "Value": {
+              "Ref": "appCDN7AD2C001"
+            }
+          }
+        }
+      },
+      "coreCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ServerlessDeploymentBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+              "Bucket": {
+                "Ref": "ServerlessDeploymentBucket"
+              },
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Action": "s3:*",
+                    "Effect": "Deny",
+                    "Principal": "*",
+                    "Resource": [
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            },
+                            "/*"
+                          ]
+                        ]
+                      },
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "arn:",
+                            {
+                              "Ref": "AWS::Partition"
+                            },
+                            ":s3:::",
+                            {
+                              "Ref": "ServerlessDeploymentBucket"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "Condition": {
+                      "Bool": {
+                        "aws:SecureTransport": false
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            }
+          }
+        }
+      }
+    },
+    "plugins": [
+      "serverless-lift"
+    ],
+    "pluginsData": {},
+    "functions": {},
+    "resources": {
+      "Resources": {
+        "appAssets5B5A4C9F": {
+          "Type": "AWS::S3::Bucket",
+          "UpdateReplacePolicy": "Delete",
+          "DeletionPolicy": "Delete"
+        },
+        "appRequestFunction26931B51": {
+          "Type": "AWS::CloudFront::Function",
+          "Properties": {
+            "AutoPublish": true,
+            "FunctionCode": "function handler(event) {\n    var request = event.request;\n    request.headers[\"x-forwarded-host\"] = request.headers[\"host\"];\n    return request;\n}",
+            "FunctionConfig": {
+              "Comment": "wow-phone-resume-production-us-east-1-app-request",
+              "Runtime": "cloudfront-js-1.0"
+            },
+            "Name": "wow-phone-resume-production-us-east-1-app-request"
+          }
+        },
+        "appCDN7AD2C001": {
+          "Type": "AWS::CloudFront::Distribution",
+          "Properties": {
+            "DistributionConfig": {
+              "Comment": "wow-phone-resume-production app website CDN",
+              "CustomErrorResponses": [
+                {
+                  "ErrorCachingMinTTL": 0,
+                  "ErrorCode": 500
+                },
+                {
+                  "ErrorCachingMinTTL": 0,
+                  "ErrorCode": 504
+                }
+              ],
+              "DefaultCacheBehavior": {
+                "AllowedMethods": [
+                  "GET",
+                  "HEAD",
+                  "OPTIONS",
+                  "PUT",
+                  "PATCH",
+                  "POST",
+                  "DELETE"
+                ],
+                "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+                "Compress": true,
+                "FunctionAssociations": [
+                  {
+                    "EventType": "viewer-request",
+                    "FunctionARN": {
+                      "Fn::GetAtt": [
+                        "appRequestFunction26931B51",
+                        "FunctionARN"
+                      ]
+                    }
+                  }
+                ],
+                "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+                "TargetOriginId": "appCDNOrigin19F0868D7",
+                "ViewerProtocolPolicy": "redirect-to-https"
+              },
+              "Enabled": true,
+              "HttpVersion": "http2and3",
+              "IPV6Enabled": true,
+              "Origins": [
+                {
+                  "CustomOriginConfig": {
+                    "OriginProtocolPolicy": "https-only",
+                    "OriginSSLProtocols": [
+                      "TLSv1.2"
+                    ]
+                  },
+                  "DomainName": {
+                    "Fn::Join": [
+                      ".",
+                      [
+                        {
+                          "Ref": "HttpApi"
+                        },
+                        "execute-api.us-east-1.amazonaws.com"
+                      ]
+                    ]
+                  },
+                  "Id": "appCDNOrigin19F0868D7"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "Outputs": {
+        "appAssetsBucketName7D197FA3": {
+          "Description": "Name of the bucket that stores the website assets.",
+          "Value": {
+            "Ref": "appAssets5B5A4C9F"
+          }
+        },
+        "appDomain27230DAE": {
+          "Description": "Website domain name.",
+          "Value": {
+            "Fn::GetAtt": [
+              "appCDN7AD2C001",
+              "DomainName"
+            ]
+          }
+        },
+        "appCloudFrontCName01332E65": {
+          "Description": "CloudFront CNAME.",
+          "Value": {
+            "Fn::GetAtt": [
+              "appCDN7AD2C001",
+              "DomainName"
+            ]
+          }
+        },
+        "appDistributionIdFAAEA28E": {
+          "Description": "ID of the CloudFront distribution.",
+          "Value": {
+            "Ref": "appCDN7AD2C001"
+          }
+        }
+      }
+    },
+    "configValidationMode": "warn",
+    "serviceFilename": "serverless.yml",
+    "initialServerlessConfig": {
+      "service": "wow-phone-resume",
+      "useDotenv": true,
+      "provider": {
+        "name": "aws",
+        "region": "us-east-1",
+        "stage": "production",
+        "environment": {
+          "NODE_ENV": "production",
+          "PORT": "8080",
+          "TWILIO_ACCOUNT_SID": "AC4bdd790ee3a3bb5d6b49c771a03e99d2",
+          "TWILIO_AUTH_TOKEN": "19aebc8d4b3efd93a296859d25220631",
+          "TWILIO_PHONE_NUMBER": "+16469561232",
+          "AZURE_OPENAI_ENDPOINT": "https://wow-rg-ai.cognitiveservices.azure.com",
+          "AZURE_OPENAI_API_KEY": "3U2zukcSZWNDiT999h4XnH7QPXoIeXgnwDBcSce6VI4dWW3h23dxJQQJ99BEACHYHv6XJ3w3AAAAACOGqCmH",
+          "AZURE_OPENAI_DEPLOYMENT_NAME": "gpt-4o-realtime-preview",
+          "DB_URL": "mongodb+srv://bloombook:AUxKDrIdvbdcl9eH@cluster0.44rdqx8.mongodb.net"
+        },
+        "versionFunctions": true
+      },
+      "constructs": {
+        "app": {
+          "type": "server-side-website",
+          "containers": {
+            "app": {
+              "image": {
+                "dockerfile": "Dockerfile"
+              },
+              "port": 8080,
+              "healthCheck": {
+                "command": [
+                  "CMD-SHELL",
+                  "node -e \"require('http').get('http://localhost:8080/api/v1/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""
+                ],
+                "interval": 30,
+                "timeout": 5,
+                "retries": 3,
+                "startPeriod": 60
+              }
+            }
+          },
+          "apiGateway": false,
+          "taskSize": {
+            "cpu": 1024,
+            "memory": 2048
+          },
+          "scaling": {
+            "min": 1,
+            "max": 5,
+            "cpuThreshold": 75
+          }
+        }
+      },
+      "plugins": {
+        "$ref": "$[\"service\"][\"plugins\"]"
+      }
+    },
+    "layers": {},
+    "isDashboardMonitoringPreconfigured": false
+  },
+  "package": {
+    "artifactDirectoryName": "serverless/wow-phone-resume/production/1765846756677-2025-12-16T00:59:16.677Z",
+    "artifact": ""
+  }
+}
