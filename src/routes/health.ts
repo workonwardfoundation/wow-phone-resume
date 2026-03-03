@@ -20,9 +20,8 @@ export default function healthRoutes(
       TWILIO_ACCOUNT_SID: !!process.env.TWILIO_ACCOUNT_SID,
       TWILIO_AUTH_TOKEN: !!process.env.TWILIO_AUTH_TOKEN,
       TWILIO_PHONE_NUMBER: !!process.env.TWILIO_PHONE_NUMBER,
-      AZURE_OPENAI_ENDPOINT: !!process.env.AZURE_OPENAI_ENDPOINT,
-      AZURE_OPENAI_API_KEY: !!process.env.AZURE_OPENAI_API_KEY,
-      AZURE_OPENAI_DEPLOYMENT_NAME: !!process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+      OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+      OPENAI_REALTIME_MODEL: !!process.env.OPENAI_REALTIME_MODEL,
       PORT: process.env.PORT || '8080',
       NODE_ENV: process.env.NODE_ENV || 'development'
     };

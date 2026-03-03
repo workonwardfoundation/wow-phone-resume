@@ -24,7 +24,7 @@ source .env
 set +a
 
 # Validate required environment variables
-REQUIRED_VARS=("TWILIO_ACCOUNT_SID" "TWILIO_AUTH_TOKEN" "TWILIO_PHONE_NUMBER" "AZURE_OPENAI_ENDPOINT" "AZURE_OPENAI_API_KEY" "AZURE_OPENAI_DEPLOYMENT_NAME" "DB_URL")
+REQUIRED_VARS=("TWILIO_ACCOUNT_SID" "TWILIO_AUTH_TOKEN" "TWILIO_PHONE_NUMBER" "OPENAI_API_KEY" "OPENAI_REALTIME_MODEL" "DB_URL")
 MISSING_VARS=()
 for var in "${REQUIRED_VARS[@]}"; do
     if [ -z "${!var}" ]; then
@@ -268,9 +268,8 @@ if [ -f "$TASK_DEF_FILE" ]; then
         -e "s|PLACEHOLDER_TWILIO_ACCOUNT_SID|$TWILIO_ACCOUNT_SID|g" \
         -e "s|PLACEHOLDER_TWILIO_AUTH_TOKEN|$TWILIO_AUTH_TOKEN|g" \
         -e "s|PLACEHOLDER_TWILIO_PHONE_NUMBER|$TWILIO_PHONE_NUMBER|g" \
-        -e "s|PLACEHOLDER_AZURE_OPENAI_ENDPOINT|$AZURE_OPENAI_ENDPOINT|g" \
-        -e "s|PLACEHOLDER_AZURE_OPENAI_API_KEY|$AZURE_OPENAI_API_KEY|g" \
-        -e "s|PLACEHOLDER_AZURE_OPENAI_DEPLOYMENT_NAME|$AZURE_OPENAI_DEPLOYMENT_NAME|g" \
+        -e "s|PLACEHOLDER_OPENAI_API_KEY|$OPENAI_API_KEY|g" \
+        -e "s|PLACEHOLDER_OPENAI_REALTIME_MODEL|$OPENAI_REALTIME_MODEL|g" \
         -e "s|PLACEHOLDER_DB_URL|$DB_URL|g" \
         "$TASK_DEF_FILE" > "$TEMP_TASK_DEF"
 else
@@ -434,4 +433,3 @@ echo "  5. Check service status:"
 echo "     aws ecs describe-services --cluster $CLUSTER_NAME --services $SERVICE_NAME --region $AWS_REGION"
 echo ""
 print_info "Run './get-service-url.sh' in 2-3 minutes to get your service URL!"
-

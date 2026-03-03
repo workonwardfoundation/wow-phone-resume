@@ -13,9 +13,8 @@ const requiredEnvVars = {
   TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
   TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
   TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-  AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT,
-  AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY,
-  AZURE_OPENAI_DEPLOYMENT_NAME: process.env.AZURE_OPENAI_DEPLOYMENT_NAME
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  OPENAI_REALTIME_MODEL: process.env.OPENAI_REALTIME_MODEL
 };
 
 // Check for missing environment variables
@@ -114,7 +113,7 @@ function sendInitialGreeting(session: Session) {
       content: [
         {
           type: 'input_text',
-          text: 'Greet the user with a welcome message and introduce yourself as an AI assistant powered by Twilio and Azure OpenAI.'
+          text: 'Greet the user with a welcome message and introduce yourself as an AI assistant powered by Twilio and OpenAI.'
         }
       ]
     }
@@ -199,22 +198,9 @@ export function handleMediaStream(
             }
           }, 2000);
 
-          // Connect to Azure OpenAI WebSocket
-          // Convert HTTP endpoint to WebSocket endpoint for proper WebSocket connection
-          const httpEndpoint = process.env.AZURE_OPENAI_ENDPOINT as string;
-          let websocketUrl = `${httpEndpoint.replace('https://', 'wss://')}/openai/realtime?api-version=2024-10-01-preview&deployment=${process.env.AZURE_OPENAI_DEPLOYMENT_NAME}`;
-          
-          // Check if we need to try the alternative domain format
-          const isAlternativeDomain = httpEndpoint.includes('.cognitiveservices.azure.com');
-          if (isAlternativeDomain) {
-            // Try openai.azure.com format first as recommended in documentation
-            const resourceName = httpEndpoint.replace('https://', '').split('.')[0];
-            const alternativeUrl = `wss://${resourceName}.openai.azure.com/openai/realtime?api-version=2024-10-01-preview&deployment=${process.env.AZURE_OPENAI_DEPLOYMENT_NAME}`;
-            fastify.log.info(`Using openai.azure.com domain format for realtime API`);
-            websocketUrl = alternativeUrl;
-          }
-          
-          fastify.log.info(`Attempting to connect to Azure OpenAI WebSocket: ${websocketUrl}`);
+          // Connect to OpenAI Realtime WebSocket
+          const websocketUrl = `wss://api.openai.com/v1/realtime?model=${process.env.OPENAI_REALTIME_MODEL}`;
+          fastify.log.info(`Attempting to connect to OpenAI WebSocket: ${websocketUrl}`);
           
           let openAiWs: WebSocket;
           try {
@@ -222,7 +208,7 @@ export function handleMediaStream(
               websocketUrl,
               {
                 headers: {
-                  'api-key': process.env.AZURE_OPENAI_API_KEY,
+                  Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
                   'OpenAI-Beta': 'realtime=v1',
                 },
               }
@@ -241,7 +227,7 @@ export function handleMediaStream(
 
           openAiWs.on('open', () => {
             fastify.log.info(
-              `Connected to Azure OpenAI for stream ${streamSid}`
+              `Connected to OpenAI for stream ${streamSid}`
             );
             const systemMessage = getSystemMessage(session.language);
             const sessionUpdate = {
@@ -268,7 +254,7 @@ export function handleMediaStream(
               const configJson = JSON.stringify(sessionUpdate, null, 2);
               fastify.log.info(`Session config JSON: ${configJson}`);
               openAiWs.send(configJson);
-              fastify.log.info('Session config successfully sent to Azure OpenAI');
+              fastify.log.info('Session config successfully sent to OpenAI');
             } catch (error) {
               fastify.log.error('Error sending session config:', error);
               fastify.log.info('Raw sessionUpdate object:', sessionUpdate);
@@ -394,7 +380,7 @@ export function handleMediaStream(
 
           openAiWs.on('close', (code, reason) => {
             fastify.log.info(
-              `Disconnected from Azure OpenAI for stream ${streamSid}`,
+              `Disconnected from OpenAI for stream ${streamSid}`,
               {
                 closeCode: code,
                 closeReason: reason?.toString(),

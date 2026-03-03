@@ -1,6 +1,6 @@
 # Call-Based Resume Backend
 
-This project implements a backend server for the WorkOnward Resume Assistant using Fastify, WebSockets, and MongoDB. It is designed to handle Twilio voice calls and provide a conversational interface for resume creation using Azure OpenAI integration.
+This project implements a backend server for the WorkOnward Resume Assistant using Fastify, WebSockets, and MongoDB. It is designed to handle Twilio voice calls and provide a conversational interface for resume creation using OpenAI Realtime integration.
 
 ## Features
 
@@ -76,11 +76,10 @@ Install following extensions:
 Create a .env file in the project root with the following variables (adjust as needed):
 
 ```
-PORT=80
-MONGODB_URI=your_mongodb_connection_string
-AZURE_OPENAI_ENDPOINT=your_azure_openai_endpoint
-AZURE_OPENAI_API_KEY=your_azure_openai_api_key
-AZURE_OPENAI_DEPLOYMENT_NAME=your_deployment_name
+PORT=8080
+DB_URL=your_mongodb_connection_string
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_REALTIME_MODEL=your_realtime_model_name
 ```
 
 ### 4. Running the Server
@@ -101,7 +100,7 @@ npm run start
 If you are using ngrok to expose your local server to the internet for Twilio, run:
 
 ```
-ngrok http 80
+ngrok http 8080
 ```
 
 <img width="982" alt="image" src="https://github.com/user-attachments/assets/9185992e-c7b8-4490-b8c7-7fbe11044379" />
@@ -184,6 +183,44 @@ If you prefer Google Cloud Platform, use the existing deployment script:
 ```
 
 📖 See [test_DEPLOYMENT.md](./test_DEPLOYMENT.md) for Cloud Run deployment details.
+
+---
+
+### Railway (Dockerfile, Port 8080)
+
+Use Railway with the existing `Dockerfile`.
+
+1. Create a new Railway project and connect this repository.
+2. In service settings, set deploy source to `Dockerfile` (or let Railway auto-detect it).
+3. Set environment variables in Railway:
+
+```bash
+PORT=8080
+NODE_ENV=production
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_REALTIME_MODEL=gpt-4o-realtime-preview
+DB_URL=your_mongodb_connection_string
+```
+
+4. Keep health check path as:
+
+```bash
+/api/v1/health
+```
+
+5. After deploy, copy the Railway public domain and set Twilio webhooks:
+
+- Incoming call webhook: `https://<your-railway-domain>/api/v1/call/incoming`
+- Language webhook: `https://<your-railway-domain>/api/v1/call/language`
+
+The app generates media stream TwiML at runtime and will use:
+
+- `wss://<your-railway-domain>/api/v1/media-stream`
+
+Important: point Twilio to the Railway public domain so request host headers resolve correctly.
 
 ---
 

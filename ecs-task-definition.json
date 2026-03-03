@@ -40,16 +40,12 @@
           "value": "PLACEHOLDER_TWILIO_PHONE_NUMBER"
         },
         {
-          "name": "AZURE_OPENAI_ENDPOINT",
-          "value": "PLACEHOLDER_AZURE_OPENAI_ENDPOINT"
+          "name": "OPENAI_API_KEY",
+          "value": "PLACEHOLDER_OPENAI_API_KEY"
         },
         {
-          "name": "AZURE_OPENAI_API_KEY",
-          "value": "PLACEHOLDER_AZURE_OPENAI_API_KEY"
-        },
-        {
-          "name": "AZURE_OPENAI_DEPLOYMENT_NAME",
-          "value": "PLACEHOLDER_AZURE_OPENAI_DEPLOYMENT_NAME"
+          "name": "OPENAI_REALTIME_MODEL",
+          "value": "PLACEHOLDER_OPENAI_REALTIME_MODEL"
         },
         {
           "name": "DB_URL",
@@ -78,4 +74,3 @@
     }
   ]
 }
-

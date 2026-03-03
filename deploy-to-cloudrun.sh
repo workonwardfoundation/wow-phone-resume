@@ -62,7 +62,7 @@ gcloud run deploy $SERVICE_NAME \
   --timeout 3600 \
   --max-instances 5 \
   --min-instances 1 \
-  --set-env-vars NODE_ENV=production,TWILIO_ACCOUNT_SID="AC4bdd790ee3a3bb5d6b49c771a03e99d2",TWILIO_AUTH_TOKEN="19aebc8d4b3efd93a296859d25220631",TWILIO_PHONE_NUMBER="+16469561232",AZURE_OPENAI_ENDPOINT="https://wow-rg-ai.cognitiveservices.azure.com",AZURE_OPENAI_API_KEY="3U2zukcSZWNDiT999h4XnH7QPXoIeXgnwDBcSce6VI4dWW3h23dxJQQJ99BEACHYHv6XJ3w3AAAAACOGqCmH",AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o-realtime-preview",DB_URL="mongodb+srv://bloombook:AUxKDrIdvbdcl9eH@cluster0.44rdqx8.mongodb.net"
+  --set-env-vars NODE_ENV=production,TWILIO_ACCOUNT_SID="AC4bdd790ee3a3bb5d6b49c771a03e99d2",TWILIO_AUTH_TOKEN="19aebc8d4b3efd93a296859d25220631",TWILIO_PHONE_NUMBER="+16469561232",OPENAI_API_KEY="YOUR_OPENAI_API_KEY",OPENAI_REALTIME_MODEL="gpt-4o-realtime-preview",DB_URL="mongodb+srv://bloombook:AUxKDrIdvbdcl9eH@cluster0.44rdqx8.mongodb.net"
 
 echo -e "${GREEN}✅ Deployment complete!${NC}"
 echo ""
